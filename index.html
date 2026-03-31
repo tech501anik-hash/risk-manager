@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Risk Manager</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#010409">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Risk Mgr">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #010409;
+    --surface: #0d1117;
+    --border: #21262d;
+    --border2: #30363d;
+    --text: #e6edf3;
+    --muted: #6b7280;
+    --dim: #4b5563;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --blue: #60a5fa;
+    --purple: #a855f7;
+    --green-glow: rgba(34,197,94,0.12);
+    --red-glow: rgba(239,68,68,0.12);
+    --amber-glow: rgba(245,158,11,0.12);
+    --blue-glow: rgba(96,165,250,0.12);
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  body {
+    background: var(--bg); color: var(--text); font-family: var(--mono);
+    min-height: 100vh; padding: 32px 16px 60px; display: flex; justify-content: center;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 50% -10%, rgba(245,158,11,0.06) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+  }
+
+  .container { width: 100%; max-width: 500px; animation: fadeUp 0.5s ease both; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  /* HEADER */
+  .header { margin-bottom: 28px; }
+  .header-badge { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .dot { width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2s ease infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+  .badge-text { font-size:10px;color:var(--green);letter-spacing:.22em;font-weight:600; }
+  .header h1 { font-family:var(--display);font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.02em;line-height:1.1; }
+  .header p  { font-size:11px;color:var(--dim);margin-top:5px;letter-spacing:.04em; }
+
+  /* CARDS */
+  .card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;transition:border-color .2s; }
+  .card:hover { border-color:var(--border2); }
+  .section-label { font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;font-weight:600; }
+
+  /* DIRECTION TABS */
+  .tabs { display:flex;gap:8px; }
+  .tab { flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.1em;cursor:pointer;transition:all .15s; }
+  .tab.long.active  { border-color:var(--green);background:var(--green-glow);color:var(--green); }
+  .tab.short.active { border-color:var(--red);background:var(--red-glow);color:var(--red); }
+  .tab:hover:not(.active) { border-color:var(--border2);color:var(--text); }
+
+  /* TOGGLE */
+  .sl-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+  .toggle-group { display:flex;gap:6px; }
+  .toggle-btn { padding:4px 12px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s; }
+  .toggle-btn.active { border-color:var(--amber);background:var(--amber-glow);color:var(--amber); }
+
+  /* TF TABS */
+  .tf-tabs { display:flex;gap:6px;margin-bottom:12px; }
+  .tf-tab { padding:4px 12px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;font-weight:600; }
+  .tf-tab.active { border-color:var(--blue);background:var(--blue-glow);color:var(--blue); }
+
+  /* INPUTS */
+  .input-group { margin-bottom:12px; }
+  .input-group:last-child { margin-bottom:0; }
+  .input-label { display:block;font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-weight:500; }
+  .input-wrap { display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:7px;overflow:hidden;transition:border-color .15s; }
+  .input-wrap:focus-within { border-color:var(--amber);box-shadow:0 0 0 3px rgba(245,158,11,.08); }
+  .input-prefix,.input-suffix { padding:10px 12px;font-size:13px;font-family:var(--mono);color:var(--amber);background:rgba(245,158,11,.06);white-space:nowrap; }
+  .input-prefix { border-right:1px solid var(--border); }
+  .input-suffix  { border-left:1px solid var(--border);color:var(--muted);font-size:12px; }
+  input[type="number"] { flex:1;background:transparent;border:none;outline:none;color:var(--text);padding:10px 12px;font-size:14px;font-family:var(--mono);font-weight:500;-moz-appearance:textfield; }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+  /* RESULTS GRID */
+  .results-label { font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;font-weight:600; }
+  .results-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+  .result-card { background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:14px 16px;position:relative;overflow:hidden;transition:transform .15s; }
+  .result-card:hover { transform:translateY(-1px); }
+  .result-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px; }
+  .result-card.green::before  { background:var(--green); }
+  .result-card.red::before    { background:var(--red); }
+  .result-card.amber::before  { background:var(--amber); }
+  .result-card.blue::before   { background:var(--blue); }
+  .result-card.purple::before { background:var(--purple); }
+  .result-card.full { grid-column:span 2; }
+  .result-label { font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-weight:600; }
+  .result-value { font-size:18px;font-weight:700;font-family:var(--mono);line-height:1; }
+  .result-card.green .result-value  { color:var(--green); }
+  .result-card.red .result-value    { color:var(--red); }
+  .result-card.amber .result-value  { color:var(--amber); }
+  .result-card.blue .result-value   { color:var(--blue); }
+  .result-card.purple .result-value { color:var(--purple); }
+  .result-sub { font-size:10px;color:var(--dim);margin-top:4px;font-family:var(--mono); }
+
+  /* COPY BTN */
+  .copy-btn { position:absolute;top:10px;right:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:4px;padding:3px 7px;cursor:pointer;font-family:var(--mono);font-size:9px;color:var(--muted);transition:all .15s;letter-spacing:.06em; }
+  .copy-btn:hover { background:rgba(255,255,255,.08);color:var(--text);border-color:var(--border2); }
+  .copy-btn.copied { color:var(--green);border-color:var(--green);background:var(--green-glow); }
+
+  /* LIQUIDATION CARD */
+  .liq-card { background:var(--surface);border:1px solid rgba(239,68,68,.3);border-radius:9px;padding:16px;margin-bottom:10px;position:relative;overflow:hidden; }
+  .liq-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--red); }
+  .liq-inner { display:flex;gap:10px; }
+  .liq-col { flex:1; }
+  .liq-divider { width:1px;background:var(--border);margin:0 4px; }
+  .liq-warning { margin-top:10px;padding:8px 10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;font-size:10px;color:#fca5a5;line-height:1.5;display:none; }
+
+  /* LEVERAGE CARD */
+  .lev-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden; }
+  .lev-card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--amber),var(--red)); }
+  .lev-top { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px; }
+  .lev-value { font-size:26px;font-weight:800;font-family:var(--mono);line-height:1;transition:color .3s; }
+  .lev-badge { padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.1em;font-family:var(--mono);transition:all .3s; }
+  .lev-badge.safe   { background:var(--green-glow);color:var(--green);border:1px solid rgba(34,197,94,.3); }
+  .lev-badge.low    { background:rgba(132,204,22,.1);color:#84cc16;border:1px solid rgba(132,204,22,.3); }
+  .lev-badge.med    { background:var(--amber-glow);color:var(--amber);border:1px solid rgba(245,158,11,.3); }
+  .lev-badge.high   { background:rgba(249,115,22,.1);color:#f97316;border:1px solid rgba(249,115,22,.3); }
+  .lev-badge.danger { background:var(--red-glow);color:var(--red);border:1px solid rgba(239,68,68,.3); }
+  .lev-meter-wrap { margin-bottom:10px; }
+
+  /* DRAGGABLE LEVER SLIDER */
+  .lev-slider-label { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px; }
+  .lev-slider-title { font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;font-weight:600; }
+  .lev-sim-badge { font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:4px;font-family:var(--mono);display:none; }
+  .lev-sim-badge.active { display:inline-block;background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3); }
+  .lev-slider-wrap { position:relative;margin-bottom:6px; }
+  .lev-slider-track-bg { height:8px;border-radius:4px;background:linear-gradient(90deg,var(--green) 0%,#84cc16 20%,var(--amber) 45%,#f97316 70%,var(--red) 100%);opacity:.25;border-radius:4px; }
+  input[type=range]#lev-slider {
+    position:absolute;top:0;left:0;width:100%;height:8px;
+    -webkit-appearance:none;appearance:none;
+    background:transparent;cursor:pointer;margin:0;
+  }
+  input[type=range]#lev-slider::-webkit-slider-thumb {
+    -webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;
+    background:var(--text);border:2px solid var(--bg);
+    box-shadow:0 0 10px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.1);
+    cursor:grab;transition:transform .1s,box-shadow .1s;margin-top:-5px;
+  }
+  input[type=range]#lev-slider::-webkit-slider-thumb:active { cursor:grabbing;transform:scale(1.2); }
+  input[type=range]#lev-slider::-moz-range-thumb {
+    width:18px;height:18px;border-radius:50%;
+    background:var(--text);border:2px solid var(--bg);
+    box-shadow:0 0 10px rgba(0,0,0,.6);cursor:grab;
+  }
+  input[type=range]#lev-slider::-webkit-slider-runnable-track { height:8px;border-radius:4px;background:transparent; }
+  input[type=range]#lev-slider::-moz-range-track { height:8px;border-radius:4px;background:transparent; }
+  .lev-zones { display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;font-weight:600;opacity:.7;margin-top:2px; }
+  .lev-note { font-size:11px;color:var(--muted);padding-top:10px;border-top:1px solid var(--border);line-height:1.5; }
+
+  /* SIM RESULT PANEL */
+  .lev-sim-panel { margin-top:12px;padding:12px;background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.2);border-radius:8px;display:none; }
+  .lev-sim-panel.show { display:block; }
+  .lev-sim-row { display:flex;gap:8px; }
+  .lev-sim-col { flex:1;text-align:center; }
+  .lev-sim-col-label { font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-weight:600;margin-bottom:4px; }
+  .lev-sim-col-val { font-size:15px;font-weight:700;font-family:var(--mono); }
+  .lev-sim-col-sub { font-size:9px;color:var(--dim);margin-top:2px; }
+  .lev-sim-divider { width:1px;background:var(--border);margin:0 4px; }
+  .lev-sim-reset { display:block;width:100%;margin-top:10px;padding:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:.08em;transition:all .15s; }
+  .lev-sim-reset:hover { border-color:var(--border2);color:var(--text); }
+
+  /* BREAKEVEN */
+  .be-card { background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:9px;padding:14px 16px;margin-bottom:12px; }
+  .be-row { display:flex;justify-content:space-between;align-items:center; }
+  .be-col { flex:1; }
+  .be-label { font-size:9px;letter-spacing:.14em;color:var(--green);text-transform:uppercase;font-weight:600;margin-bottom:5px; }
+  .be-val { font-size:16px;font-weight:700;color:var(--green);font-family:var(--mono); }
+  .be-sub { font-size:10px;color:var(--dim);margin-top:3px; }
+  .be-divider { width:1px;background:rgba(34,197,94,.15);margin:0 14px;align-self:stretch; }
+
+  /* RR BAR */
+  .rr-section { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px; }
+  .rr-labels { display:flex;justify-content:space-between;align-items:center;margin-bottom:10px; }
+  .rr-label-left  { font-size:11px;color:var(--red);letter-spacing:.08em; }
+  .rr-label-mid   { font-size:11px;color:var(--amber);letter-spacing:.08em;font-weight:700; }
+  .rr-label-right { font-size:11px;color:var(--green);letter-spacing:.08em; }
+  .rr-bar { display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:8px; }
+  .rr-risk   { background:linear-gradient(90deg,#ef444488,var(--red));border-radius:5px 0 0 5px;flex:1; }
+  .rr-reward { background:linear-gradient(90deg,#22c55e88,var(--green));border-radius:0 5px 5px 0;transition:flex .3s ease; }
+  .rr-amounts { display:flex;justify-content:space-between; }
+  .rr-loss { font-size:13px;color:var(--red);font-weight:700; }
+  .rr-gain { font-size:13px;color:var(--green);font-weight:700; }
+
+  /* TP TABLE */
+  .tp-table { width:100%;border-collapse:collapse;font-size:12px; }
+  .tp-table th { text-align:left;font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;padding:0 0 10px;font-weight:600; }
+  .tp-table td { padding:8px 0;border-top:1px solid var(--border);color:var(--text);font-weight:500; }
+  .tp-table td:last-child { text-align:right; }
+  .tp-badge { display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.06em; }
+  .tp-badge.r2 { background:var(--green-glow);color:var(--green);border:1px solid rgba(34,197,94,.3); }
+  .tp-badge.r3 { background:var(--blue-glow);color:var(--blue);border:1px solid rgba(96,165,250,.3); }
+  .tp-badge.r4 { background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.3); }
+
+  /* SESSION TRACKER */
+  .session-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:12px; }
+  .session-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+  .session-counters { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px; }
+  .sess-count { background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center; }
+  .sess-num { font-size:22px;font-weight:800;font-family:var(--mono);line-height:1; }
+  .sess-lbl { font-size:9px;letter-spacing:.1em;color:var(--muted);margin-top:3px;text-transform:uppercase; }
+  .sess-count.wins   .sess-num { color:var(--green); }
+  .sess-count.losses .sess-num { color:var(--red); }
+  .sess-count.total  .sess-num { color:var(--amber); }
+  .session-btns { display:flex;gap:8px;margin-bottom:12px; }
+  .sess-btn { flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.06em; }
+  .sess-btn.win   { background:var(--green-glow);color:var(--green);border-color:rgba(34,197,94,.3); }
+  .sess-btn.win:hover  { background:rgba(34,197,94,.2); }
+  .sess-btn.loss  { background:var(--red-glow);color:var(--red);border-color:rgba(239,68,68,.3); }
+  .sess-btn.loss:hover { background:rgba(239,68,68,.2); }
+  .sess-btn.reset { background:transparent;color:var(--muted);border-color:var(--border);font-size:10px;flex:0;padding:4px 12px; }
+  .sess-btn.reset:hover { color:var(--text);border-color:var(--border2); }
+  .sess-alert { padding:10px 12px;border-radius:7px;font-size:11px;line-height:1.5;display:none;font-weight:600; }
+  .sess-alert.warn-loss  { display:block;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5; }
+  .sess-alert.warn-trade { display:block;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:#fcd34d; }
+
+  /* FOOTER */
+  .footer { text-align:center;font-size:10px;color:var(--dim);letter-spacing:.1em;margin-top:24px;padding-top:16px;border-top:1px solid var(--border); }
+  .hidden { display:none !important; }
+
+  /* TOAST */
+  .toast { position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(60px);background:#1e293b;border:1px solid var(--green);color:var(--green);padding:8px 18px;border-radius:20px;font-size:12px;font-family:var(--mono);pointer-events:none;transition:transform .25s ease,opacity .25s;opacity:0;z-index:1001;letter-spacing:.06em; }
+  .toast.show { transform:translateX(-50%) translateY(0);opacity:1; }
+
+  /* INSTALL BANNER */
+  .install-banner { display:none;position:fixed;bottom:0;left:0;right:0;background:#0d1117;border-top:1px solid rgba(245,158,11,.4);padding:14px 16px;z-index:1000;align-items:center;gap:12px; }
+  .install-banner.show { display:flex; }
+  .install-icon { width:36px;height:36px;border-radius:8px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0; }
+  .install-text { flex:1; }
+  .install-text strong { display:block;font-size:12px;color:var(--text);font-family:var(--mono);font-weight:700;letter-spacing:.04em; }
+  .install-text span { font-size:10px;color:var(--muted);letter-spacing:.04em; }
+  .install-btn { padding:8px 14px;border-radius:7px;background:var(--amber);color:#000;font-family:var(--mono);font-size:11px;font-weight:700;border:none;cursor:pointer;letter-spacing:.08em;flex-shrink:0; }
+  .install-dismiss { padding:8px;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;flex-shrink:0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">
+      <div class="dot"></div>
+      <span class="badge-text">LIVE CALCULATOR</span>
+    </div>
+    <h1>Risk Manager</h1>
+    <p>SL · Liquidation · Size · TP · Session tracker</p>
+  </div>
+
+  <!-- DIRECTION -->
+  <div class="card">
+    <div class="section-label">Direction</div>
+    <div class="tabs">
+      <button class="tab long active" id="btn-long"  onclick="setDir('long')">▲ &nbsp;LONG</button>
+      <button class="tab short"       id="btn-short" onclick="setDir('short')">▼ &nbsp;SHORT</button>
+    </div>
+  </div>
+
+  <!-- ENTRY & ACCOUNT -->
+  <div class="card">
+    <div class="section-label">Entry & Account</div>
+    <div class="input-group">
+      <label class="input-label">Entry Price</label>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="entry" value="83000" oninput="calc()">
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Account Size</label>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="account" value="1000" oninput="calc()">
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Margin (Collateral Posted) <span id="margin-pct-hint" style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0"></span></label>
+      <div class="input-wrap">
+        <span class="input-prefix">$</span>
+        <input type="number" id="margin" value="100" oninput="calc()">
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Risk Per Trade</label>
+      <div class="input-wrap">
+        <input type="number" id="riskpct" value="1" step="0.1" oninput="calc()">
+        <span class="input-suffix">%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOP LOSS -->
+  <div class="card">
+    <div class="sl-header">
+      <div class="section-label" style="margin-bottom:0">Stop Loss</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btn-manual" onclick="setSlMethod('manual')">Manual</button>
+        <button class="toggle-btn"        id="btn-atr"    onclick="setSlMethod('atr')">ATR</button>
+      </div>
+    </div>
+
+    <div id="sl-manual">
+      <div class="input-group">
+        <label class="input-label">Stop Loss Price</label>
+        <div class="input-wrap">
+          <span class="input-prefix">$</span>
+          <input type="number" id="sl-price" value="81400" oninput="calc()">
+        </div>
+      </div>
+    </div>
+
+    <div id="sl-atr" class="hidden">
+      <div class="section-label" style="margin-bottom:8px;margin-top:2px;font-size:9px">Timeframe</div>
+      <div class="tf-tabs">
+        <button class="tf-tab active" id="tf-15m" onclick="setTF('15m')">15m</button>
+        <button class="tf-tab"        id="tf-1h"  onclick="setTF('1h')">1H</button>
+        <button class="tf-tab"        id="tf-4h"  onclick="setTF('4h')">4H</button>
+      </div>
+      <div class="input-group">
+        <label class="input-label" id="atr-tf-label">ATR Value (15m)</label>
+        <div class="input-wrap">
+          <span class="input-prefix">~</span>
+          <input type="number" id="atr-val" value="800" oninput="calc()">
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">ATR Multiplier</label>
+        <div class="input-wrap">
+          <input type="number" id="atr-mult" value="2" step="0.5" oninput="calc()">
+          <span class="input-suffix">×</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-group" style="margin-top:12px">
+      <label class="input-label">Risk : Reward Target</label>
+      <div class="input-wrap">
+        <input type="number" id="rr" value="2" step="0.5" oninput="calc()">
+        <span class="input-suffix">R</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results-label">Calculated Output</div>
+  <div class="results-grid-2">
+
+    <div class="result-card red">
+      <button class="copy-btn" id="copy-sl" onclick="copyVal('res-sl-raw','SL')">COPY</button>
+      <div class="result-label">Stop Loss</div>
+      <div class="result-value" id="res-sl">—</div>
+      <div class="result-sub"   id="res-sl-pct">—</div>
+      <span id="res-sl-raw" style="display:none"></span>
+    </div>
+
+    <div class="result-card green">
+      <button class="copy-btn" id="copy-tp" onclick="copyVal('res-tp-raw','TP')">COPY</button>
+      <div class="result-label">Take Profit (1st)</div>
+      <div class="result-value" id="res-tp">—</div>
+      <div class="result-sub"   id="res-tp-dist">—</div>
+      <span id="res-tp-raw" style="display:none"></span>
+    </div>
+
+    <div class="result-card amber">
+      <div class="result-label">Risk Amount</div>
+      <div class="result-value" id="res-risk">—</div>
+      <div class="result-sub"   id="res-risk-pct">—</div>
+    </div>
+
+    <div class="result-card amber">
+      <div class="result-label">SL Distance</div>
+      <div class="result-value" id="res-sldist">—</div>
+      <div class="result-sub">points</div>
+    </div>
+
+    <div class="result-card blue full">
+      <button class="copy-btn" id="copy-pos" onclick="copyVal('res-pos-raw','Size')">COPY</button>
+      <div class="result-label">Position Size</div>
+      <div class="result-value" id="res-pos">—</div>
+      <div class="result-sub"   id="res-notional">—</div>
+      <span id="res-pos-raw" style="display:none"></span>
+    </div>
+
+  </div>
+
+  <!-- LIQUIDATION CARD -->
+  <div class="liq-card">
+    <div class="result-label" style="color:var(--red);margin-bottom:10px">⚡ Liquidation Price</div>
+    <div class="liq-inner">
+      <div class="liq-col">
+        <div class="result-label">LIQ PRICE</div>
+        <div style="font-size:20px;font-weight:700;color:var(--red);font-family:var(--mono)" id="liq-price">—</div>
+        <div class="result-sub" id="liq-dist">—</div>
+      </div>
+      <div class="liq-divider"></div>
+      <div class="liq-col">
+        <div class="result-label">BUFFER vs SL</div>
+        <div style="font-size:20px;font-weight:700;color:var(--amber);font-family:var(--mono)" id="liq-buffer">—</div>
+        <div class="result-sub" id="liq-buffer-sub">—</div>
+      </div>
+    </div>
+    <div class="liq-warning" id="liq-warning"></div>
+  </div>
+
+  <!-- LEVERAGE CARD -->
+  <div class="lev-card">
+    <div class="lev-top">
+      <div>
+        <div class="result-label" style="margin-bottom:4px">Effective Leverage</div>
+        <div class="lev-value" id="lev-value">—</div>
+        <div class="result-sub" id="lev-sub">—</div>
+      </div>
+      <div class="lev-badge" id="lev-badge">—</div>
+    </div>
+    <div class="lev-meter-wrap">
+      <div class="lev-slider-label">
+        <span class="lev-slider-title">Leverage Slider — drag to simulate</span>
+        <span class="lev-sim-badge" id="lev-sim-badge">SIMULATING</span>
+      </div>
+      <div class="lev-slider-wrap">
+        <div class="lev-slider-track-bg"></div>
+        <input type="range" id="lev-slider" min="1" max="100" step="1" value="1" oninput="onLevSlider(this.value)">
+      </div>
+      <div class="lev-zones">
+        <span style="color:var(--green)">1x SAFE</span>
+        <span style="color:#84cc16">5x LOW</span>
+        <span style="color:var(--amber)">10x MED</span>
+        <span style="color:#f97316">20x HIGH</span>
+        <span style="color:var(--red)">100x ☠</span>
+      </div>
+    </div>
+
+    <!-- SIM RESULT PANEL (shows when slider is dragged) -->
+    <div class="lev-sim-panel" id="lev-sim-panel">
+      <div class="lev-sim-row" style="margin-bottom:10px">
+        <div class="lev-sim-col">
+          <div class="lev-sim-col-label">Notional</div>
+          <div class="lev-sim-col-val" id="sim-notional" style="color:var(--blue)">—</div>
+          <div class="lev-sim-col-sub" id="sim-pos-size">— BTC</div>
+        </div>
+        <div class="lev-sim-divider"></div>
+        <div class="lev-sim-col">
+          <div class="lev-sim-col-label">Profit at TP</div>
+          <div class="lev-sim-col-val" id="sim-profit" style="color:var(--green)">—</div>
+          <div class="lev-sim-col-sub" id="sim-profit-r">— R</div>
+        </div>
+        <div class="lev-sim-divider"></div>
+        <div class="lev-sim-col">
+          <div class="lev-sim-col-label">Loss at SL</div>
+          <div class="lev-sim-col-val" id="sim-loss" style="color:var(--red)">—</div>
+          <div class="lev-sim-col-sub" id="sim-loss-pct">— of margin</div>
+        </div>
+      </div>
+      <div class="lev-sim-row">
+        <div class="lev-sim-col">
+          <div class="lev-sim-col-label">Liq Price</div>
+          <div class="lev-sim-col-val" id="sim-liq" style="color:var(--red)">—</div>
+          <div class="lev-sim-col-sub" id="sim-liq-dist">—</div>
+        </div>
+        <div class="lev-sim-divider"></div>
+        <div class="lev-sim-col" style="flex:2">
+          <div class="lev-sim-col-label">SL Status</div>
+          <div class="lev-sim-col-val" id="sim-sl-safe">—</div>
+          <div class="lev-sim-col-sub" id="sim-sl-safe-sub">—</div>
+        </div>
+      </div>
+      <button class="lev-sim-reset" onclick="resetSimLev()">↩ RESET TO ACTUAL LEVERAGE</button>
+    </div>
+
+    <div class="lev-note" id="lev-note">—</div>
+  </div>
+
+  <!-- BREAKEVEN REMINDER -->
+  <div class="be-card">
+    <div class="be-row">
+      <div class="be-col">
+        <div class="be-label">🎯 Move SL to BE when price hits</div>
+        <div class="be-val" id="be-trigger">—</div>
+        <div class="be-sub">1R profit reached</div>
+      </div>
+      <div class="be-divider"></div>
+      <div class="be-col" style="padding-left:4px">
+        <div class="be-label">New SL becomes</div>
+        <div class="be-val" id="be-sl">—</div>
+        <div class="be-sub">Your entry — free trade</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RR BAR -->
+  <div class="rr-section">
+    <div class="rr-labels">
+      <span class="rr-label-left">RISK</span>
+      <span class="rr-label-mid" id="rr-label">2:1 R:R</span>
+      <span class="rr-label-right">REWARD</span>
+    </div>
+    <div class="rr-bar">
+      <div class="rr-risk"></div>
+      <div class="rr-reward" id="rr-bar-reward" style="flex:2"></div>
+    </div>
+    <div class="rr-amounts">
+      <span class="rr-loss" id="rr-loss">—</span>
+      <span class="rr-gain" id="rr-gain">—</span>
+    </div>
+  </div>
+
+  <!-- TP TABLE -->
+  <div class="card">
+    <div class="section-label">Split TP Targets</div>
+    <table class="tp-table">
+      <thead><tr><th>Target</th><th>Close</th><th>Price</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tp-badge r2">2R</span></td><td>50%</td><td id="tp-2r">—</td></tr>
+        <tr><td><span class="tp-badge r3">3R</span></td><td>30%</td><td id="tp-3r">—</td></tr>
+        <tr><td><span class="tp-badge r4">4R</span></td><td>20%</td><td id="tp-4r">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SESSION TRACKER -->
+  <div class="session-card">
+    <div class="session-header">
+      <div class="section-label" style="margin-bottom:0">Session Tracker</div>
+      <button class="sess-btn reset" onclick="resetSession()">RESET</button>
+    </div>
+    <div class="session-counters">
+      <div class="sess-count wins">
+        <div class="sess-num" id="sess-wins">0</div>
+        <div class="sess-lbl">Wins</div>
+      </div>
+      <div class="sess-count losses">
+        <div class="sess-num" id="sess-losses">0</div>
+        <div class="sess-lbl">Losses</div>
+      </div>
+      <div class="sess-count total">
+        <div class="sess-num" id="sess-total">0</div>
+        <div class="sess-lbl">/ 3 Trades</div>
+      </div>
+    </div>
+    <div class="session-btns">
+      <button class="sess-btn win"  onclick="logTrade('win')">✓ &nbsp;WIN</button>
+      <button class="sess-btn loss" onclick="logTrade('loss')">✗ &nbsp;LOSS</button>
+    </div>
+    <div class="sess-alert" id="sess-alert"></div>
+  </div>
+
+  <div class="footer">CRYPTO PERPS RISK MANAGER · RISK ONLY WHAT YOU CAN LOSE</div>
+</div>
+
+<div class="toast" id="toast">Copied!</div>
+
+<script>
+  let direction = 'long';
+  let slMethod  = 'manual';
+  let activeTF  = '15m';
+  let asset     = 'BTC';
+  let sessWins = 0, sessLosses = 0, sessTotal = 0;
+  let simMode = false;
+  let lastEntry = 0, lastNotional = 0, lastSl = 0, lastSlDist = 0, lastAccount = 0, lastMargin = 0, lastRrVal = 2;
+
+  function levZoneInfo(lev) {
+    if      (lev<=2)  return {zone:'safe',   label:'SAFE',     color:'var(--green)', note:'✓ Conservative. Liquidation very far from entry.'};
+    else if (lev<=5)  return {zone:'low',    label:'LOW',      color:'#84cc16',      note:'✓ Low leverage. SL exits well before liquidation.'};
+    else if (lev<=10) return {zone:'med',    label:'MODERATE', color:'var(--amber)', note:'⚠ Moderate leverage. Keep SL tight and respect it.'};
+    else if (lev<=20) return {zone:'high',   label:'HIGH',     color:'#f97316',      note:'⚠ High leverage. Gap risk could blow past your SL.'};
+    else              return {zone:'danger', label:'DANGER',   color:'var(--red)',   note:'✗ Extreme leverage. One bad candle and you\'re liquidated.'};
+  }
+
+  function onLevSlider(val) {
+    const lev = parseInt(val);
+    if (!lastEntry || !lastMargin) return;
+
+    simMode = true;
+    document.getElementById('lev-sim-badge').className = 'lev-sim-badge active';
+    document.getElementById('lev-sim-panel').className = 'lev-sim-panel show';
+
+    // Notional scales with leverage — margin stays fixed, lot size grows
+    const simNotional = lastMargin * lev;
+    const simPosSize  = lastEntry > 0 ? simNotional / lastEntry : 0;
+
+    // P&L on notional (not on margin)
+    const tpDist   = lastRrVal * lastSlDist;  // distance to TP
+    const simProfit = simPosSize * tpDist;     // profit if TP hit
+    const simLoss   = simPosSize * lastSlDist; // loss if SL hit
+    const simLossPct = lastMargin > 0 ? (simLoss / lastMargin * 100) : 0;
+    const simProfitR = lastSlDist > 0 ? (simProfit / simLoss) : 0;
+
+    // Liquidation price
+    const simLiqPrice = lev > 1
+      ? (direction==='long' ? lastEntry*(1 - 1/lev) : lastEntry*(1 + 1/lev))
+      : 0;
+    const simLiqPct = lastEntry>0 && simLiqPrice>0 ? (Math.abs(lastEntry-simLiqPrice)/lastEntry*100) : 0;
+
+    // SL status
+    const slBeyondLiq = direction==='long' ? (lastSl <= simLiqPrice) : (lastSl >= simLiqPrice);
+    const slToSimLiq  = Math.abs(lastSl - simLiqPrice);
+    let slSafeVal, slSafeColor, slSafeSub;
+    if (lev <= 1) {
+      slSafeVal='—'; slSafeColor='var(--muted)'; slSafeSub='No leverage';
+    } else if (simLiqPrice > 0 && slBeyondLiq) {
+      slSafeVal='⛔ DANGER'; slSafeColor='var(--red)'; slSafeSub='Liq hits before SL!';
+    } else if (simLiqPrice > 0 && slToSimLiq < lastSlDist * 0.5) {
+      slSafeVal='⚠ RISKY'; slSafeColor='#f97316'; slSafeSub='Gap could liq you';
+    } else {
+      slSafeVal='✓ SAFE'; slSafeColor='var(--green)'; slSafeSub='$'+fmt(slToSimLiq,0)+' buffer';
+    }
+
+    // Update panel
+    document.getElementById('sim-notional').textContent   = '$'+fmt(simNotional,2);
+    document.getElementById('sim-pos-size').textContent   = fmt(simPosSize,6)+' units';
+    document.getElementById('sim-profit').textContent     = '+$'+fmt(simProfit,2);
+    document.getElementById('sim-profit-r').textContent   = fmt(simProfitR,1)+'R gain';
+    document.getElementById('sim-loss').textContent       = '−$'+fmt(simLoss,2);
+    document.getElementById('sim-loss-pct').textContent   = fmt(simLossPct,1)+'% of margin';
+    document.getElementById('sim-liq').textContent        = simLiqPrice>0 ? '$'+fmt(simLiqPrice,0) : '—';
+    document.getElementById('sim-liq-dist').textContent   = simLiqPct>0 ? fmt(simLiqPct,2)+'% from entry' : 'No liq';
+    document.getElementById('sim-sl-safe').textContent    = slSafeVal;
+    document.getElementById('sim-sl-safe').style.color    = slSafeColor;
+    document.getElementById('sim-sl-safe-sub').textContent= slSafeSub;
+
+    // Update leverage display
+    const info = levZoneInfo(lev);
+    document.getElementById('lev-value').textContent = lev+'x';
+    document.getElementById('lev-value').style.color = info.color;
+    document.getElementById('lev-badge').textContent = info.label;
+    document.getElementById('lev-badge').className   = 'lev-badge '+info.zone;
+    document.getElementById('lev-note').textContent  = info.note;
+    document.getElementById('lev-sub').textContent   = lev+'x · $'+fmt(lastMargin,2)+' margin · $'+fmt(simNotional,2)+' notional';
+  }
+
+  function resetSimLev() {
+    simMode = false;
+    document.getElementById('lev-sim-badge').className = 'lev-sim-badge';
+    document.getElementById('lev-sim-panel').className = 'lev-sim-panel';
+    calc();
+  }
+
+  function setAsset(a) {
+    asset = a;
+    document.getElementById('btn-btc').className = 'tab' + (a==='BTC' ? ' long active' : '');
+    document.getElementById('btn-eth').className = 'tab' + (a==='ETH' ? ' long active' : '');
+    document.getElementById('pos-size-label').textContent = 'Position Size ('+a+')';
+    calc();
+  }
+
+  function setDir(d) {
+    direction = d;
+    document.getElementById('btn-long').className  = 'tab long'  + (d==='long'  ? ' active':'');
+    document.getElementById('btn-short').className = 'tab short' + (d==='short' ? ' active':'');
+    saveState();
+    calc();
+  }
+
+  function setSlMethod(m) {
+    slMethod = m;
+    document.getElementById('btn-manual').className = 'toggle-btn' + (m==='manual'?' active':'');
+    document.getElementById('btn-atr').className    = 'toggle-btn' + (m==='atr'   ?' active':'');
+    document.getElementById('sl-manual').className  = m==='manual' ? '' : 'hidden';
+    document.getElementById('sl-atr').className     = m==='atr'    ? '' : 'hidden';
+    saveState();
+    calc();
+  }
+
+  function setTF(tf) {
+    activeTF = tf;
+    ['15m','1h','4h'].forEach(t =>
+      document.getElementById('tf-'+t).className = 'tf-tab' + (t===tf?' active':'')
+    );
+    document.getElementById('atr-tf-label').textContent = 'ATR Value (' + tf.toUpperCase() + ')';
+    saveState();
+    calc();
+  }
+
+  function fmt(n, d=2) {
+    if (isNaN(n)||!isFinite(n)||n===0) return '—';
+    return Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  }
+
+  function copyVal(id, label) {
+    const raw = document.getElementById(id).textContent;
+    if (!raw||raw==='—') return;
+    navigator.clipboard.writeText(raw).then(() => {
+      showToast(label + ' copied: ' + raw);
+      const btns = document.querySelectorAll('.copy-btn');
+      btns.forEach(b => { if(b.getAttribute('onclick') && b.getAttribute('onclick').includes(id)) {
+        b.textContent='✓'; b.classList.add('copied');
+        setTimeout(()=>{b.textContent='COPY';b.classList.remove('copied');},1500);
+      }});
+    });
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2000);
+  }
+
+  function logTrade(type) {
+    if (sessTotal >= 3) return;
+    if (type==='win')  sessWins++;
+    if (type==='loss') sessLosses++;
+    sessTotal++;
+    updateSession();
+  }
+
+  function resetSession() {
+    sessWins=0; sessLosses=0; sessTotal=0;
+    updateSession();
+  }
+
+  function updateSession() {
+    document.getElementById('sess-wins').textContent   = sessWins;
+    document.getElementById('sess-losses').textContent = sessLosses;
+    document.getElementById('sess-total').textContent  = sessTotal;
+    const el = document.getElementById('sess-alert');
+    if (sessTotal >= 3) {
+      el.className='sess-alert warn-trade';
+      el.textContent='🔒 3 trades reached — daily max hit. Come back tomorrow.';
+    } else if (sessLosses >= 2) {
+      el.className='sess-alert warn-loss';
+      el.textContent='⛔ 2 losses hit — your rule says STOP. Close the chart now.';
+    } else if (sessLosses === 1) {
+      el.className='sess-alert warn-loss';
+      el.textContent='⚠ 1 loss recorded — one more and you must stop trading today.';
+    } else {
+      el.className='sess-alert'; el.style.display='none';
+    }
+  }
+
+  function calc() {
+    // Exit sim mode when inputs change
+    simMode = false;
+    document.getElementById('lev-sim-badge').className = 'lev-sim-badge';
+    document.getElementById('lev-sim-panel').className = 'lev-sim-panel';
+    const entry   = parseFloat(document.getElementById('entry').value)   || 0;
+    const account = parseFloat(document.getElementById('account').value) || 0;
+    const riskPct = parseFloat(document.getElementById('riskpct').value) || 0;
+    const rrVal   = parseFloat(document.getElementById('rr').value)      || 2;
+
+    let sl;
+    if (slMethod==='manual') {
+      sl = parseFloat(document.getElementById('sl-price').value)||0;
+    } else {
+      const atr  = parseFloat(document.getElementById('atr-val').value) ||0;
+      const mult = parseFloat(document.getElementById('atr-mult').value)||2;
+      sl = direction==='long' ? entry - atr*mult : entry + atr*mult;
+    }
+
+    const riskDollar = (account * riskPct) / 100;
+    const slDist     = Math.abs(entry - sl);
+    const slPct      = entry>0 ? (slDist/entry)*100 : 0;
+    const posSize    = slDist>0 ? riskDollar/slDist : 0;
+    const notional   = posSize * entry;
+
+    const tp1  = direction==='long' ? entry+slDist*rrVal : entry-slDist*rrVal;
+    const tp2r = direction==='long' ? entry+slDist*2     : entry-slDist*2;
+    const tp3r = direction==='long' ? entry+slDist*3     : entry-slDist*3;
+    const tp4r = direction==='long' ? entry+slDist*4     : entry-slDist*4;
+
+    // ── Basic outputs ──
+    document.getElementById('res-sl').textContent       = '$'+fmt(sl,0);
+    document.getElementById('res-sl-pct').textContent   = fmt(slPct,2)+'% from entry';
+    document.getElementById('res-sl-raw').textContent   = fmt(sl,0);
+    document.getElementById('res-tp').textContent       = '$'+fmt(tp1,0);
+    document.getElementById('res-tp-dist').textContent  = fmt(Math.abs(tp1-entry),0)+' pts away';
+    document.getElementById('res-tp-raw').textContent   = fmt(tp1,0);
+    document.getElementById('res-risk').textContent     = '$'+fmt(riskDollar,2);
+    document.getElementById('res-risk-pct').textContent = riskPct+'% of account';
+    document.getElementById('res-sldist').textContent   = '$'+fmt(slDist,0);
+    document.getElementById('res-pos').textContent      = fmt(posSize,6)+' units';
+    document.getElementById('res-notional').textContent = 'Notional: $'+fmt(notional,2);
+    document.getElementById('res-pos-raw').textContent  = fmt(posSize,6);
+
+    // ── Leverage ──
+    const margin = parseFloat(document.getElementById('margin').value) || 0;
+    const effLev = margin>0 ? notional/margin : 0;
+
+    // Update margin hint
+    const marginPctOfAcct = account>0 && margin>0 ? (margin/account*100) : 0;
+    document.getElementById('margin-pct-hint').textContent = marginPctOfAcct>0 ? '— '+fmt(marginPctOfAcct,1)+'% of account' : '';
+
+    // ── Liquidation price (simplified isolated margin) ──
+    // Long:  Liq = Entry × (1 - 1/lev)
+    // Short: Liq = Entry × (1 + 1/lev)
+    let liqPrice = 0;
+    if (effLev>1 && entry>0) {
+      liqPrice = direction==='long'
+        ? entry*(1 - 1/effLev)
+        : entry*(1 + 1/effLev);
+    }
+    const liqDist      = Math.abs(entry - liqPrice);
+    const liqPct       = entry>0 ? (liqDist/entry)*100 : 0;
+    const slToLiq      = Math.abs(sl - liqPrice);
+    const slToLiqPct   = sl>0 ? (slToLiq/Math.abs(entry-liqPrice))*100 : 0;
+
+    document.getElementById('liq-price').textContent      = '$'+fmt(liqPrice,0);
+    document.getElementById('liq-dist').textContent       = fmt(liqPct,2)+'% from entry';
+    document.getElementById('liq-buffer').textContent     = '$'+fmt(slToLiq,0);
+    document.getElementById('liq-buffer-sub').textContent = 'gap between SL & liquidation';
+
+    const liqWarn = document.getElementById('liq-warning');
+    const slBeyond = direction==='long' ? (sl <= liqPrice) : (sl >= liqPrice);
+    if (liqPrice>0 && slBeyond) {
+      liqWarn.textContent='⛔ DANGER: SL is at or beyond liquidation price! You will be liquidated before SL triggers. Reduce leverage.';
+      liqWarn.style.display='block';
+    } else if (liqPrice>0 && slToLiq < slDist*0.5) {
+      liqWarn.textContent='⚠ SL is very close to liquidation. A price gap could liquidate you before your SL fills. Consider reducing leverage.';
+      liqWarn.style.display='block';
+    } else {
+      liqWarn.style.display='none';
+    }
+
+    // ── Leverage display ──
+    let zone,zoneLabel,zoneColor,noteText;
+    if      (effLev<=2)  { zone='safe';   zoneLabel='SAFE';     zoneColor='var(--green)'; noteText='✓ Conservative leverage. Liquidation is very far from entry. Great.'; }
+    else if (effLev<=5)  { zone='low';    zoneLabel='LOW';       zoneColor='#84cc16';      noteText='✓ Low leverage. Your SL will exit well before liquidation.'; }
+    else if (effLev<=10) { zone='med';    zoneLabel='MODERATE'; zoneColor='var(--amber)'; noteText='⚠ Moderate leverage. Fine if SL is tight and always respected.'; }
+    else if (effLev<=20) { zone='high';   zoneLabel='HIGH';     zoneColor='#f97316';      noteText='⚠ High leverage. A gap or late SL fill could exceed planned loss.'; }
+    else                 { zone='danger'; zoneLabel='DANGER';   zoneColor='var(--red)';   noteText='✗ Extremely high leverage. Liquidation risk is severe. Reduce size now.'; }
+
+    document.getElementById('lev-value').textContent = fmt(effLev,1)+'x';
+    document.getElementById('lev-value').style.color = zoneColor;
+    document.getElementById('lev-sub').textContent   = 'Notional $'+fmt(notional,2)+' on $'+fmt(margin,2)+' margin';
+    const badge = document.getElementById('lev-badge');
+    badge.textContent = zoneLabel; badge.className = 'lev-badge '+zone;
+    document.getElementById('lev-note').textContent  = noteText;
+
+    // Sync slider to calculated leverage (only if not in sim mode)
+    if (!simMode) {
+      const sliderVal = Math.min(Math.round(effLev), 100);
+      document.getElementById('lev-slider').value = sliderVal || 1;
+    }
+
+    // Store last calc values for sim use
+    lastEntry    = entry;
+    lastNotional = notional;
+    lastSl       = sl;
+    lastSlDist   = slDist;
+    lastAccount  = account;
+    lastMargin   = margin;
+    lastRrVal    = rrVal;
+
+    // ── Breakeven reminder ──
+    const be1R = direction==='long' ? entry+slDist : entry-slDist;
+    document.getElementById('be-trigger').textContent = '$'+fmt(be1R,0);
+    document.getElementById('be-sl').textContent      = '$'+fmt(entry,0);
+
+    // ── RR bar ──
+    document.getElementById('rr-label').textContent       = rrVal+':1 R:R';
+    document.getElementById('rr-bar-reward').style.flex   = rrVal;
+    document.getElementById('rr-loss').textContent        = '−$'+fmt(riskDollar,2);
+    document.getElementById('rr-gain').textContent        = '+$'+fmt(riskDollar*rrVal,2);
+
+    // ── TP table ──
+    document.getElementById('tp-2r').textContent = '$'+fmt(tp2r,0);
+    document.getElementById('tp-3r').textContent = '$'+fmt(tp3r,0);
+    document.getElementById('tp-4r').textContent = '$'+fmt(tp4r,0);
+  }
+
+  const SAVE_KEYS = ['entry','account','margin','riskpct','rr','sl-price','atr-val','atr-mult'];
+
+  function saveState() {
+    SAVE_KEYS.forEach(k => {
+      const el = document.getElementById(k);
+      if (el) localStorage.setItem('rm_'+k, el.value);
+    });
+    localStorage.setItem('rm_direction', direction);
+    localStorage.setItem('rm_slMethod',  slMethod);
+    localStorage.setItem('rm_activeTF',  activeTF);
+  }
+
+  function loadState() {
+    SAVE_KEYS.forEach(k => {
+      const saved = localStorage.getItem('rm_'+k);
+      const el = document.getElementById(k);
+      if (saved !== null && el) el.value = saved;
+    });
+    const savedDir = localStorage.getItem('rm_direction');
+    const savedSl  = localStorage.getItem('rm_slMethod');
+    const savedTF  = localStorage.getItem('rm_activeTF');
+    if (savedDir) setDir(savedDir);
+    if (savedSl)  setSlMethod(savedSl);
+    if (savedTF)  setTF(savedTF);
+  }
+
+  // Attach saveState to all inputs
+  SAVE_KEYS.forEach(k => {
+    const el = document.getElementById(k);
+    if (el) el.addEventListener('input', saveState);
+  });
+
+  loadState();
+  calc();
+
+  // ── Service Worker ──
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
+  // ── Install Prompt ──
+  let deferredPrompt;
+  const banner = document.getElementById('install-banner');
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => banner.classList.add('show'), 3000);
+  });
+
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    banner.classList.remove('show');
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (outcome === 'accepted') showToast('\u2713 App installed!');
+    }
+  });
+
+  document.getElementById('install-dismiss').addEventListener('click', () => {
+    banner.classList.remove('show');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    banner.classList.remove('show');
+    deferredPrompt = null;
+  });
+</script>
+
+<!-- Install Banner -->
+<div class="install-banner" id="install-banner">
+  <div class="install-icon">📊</div>
+  <div class="install-text">
+    <strong>Install Risk Manager</strong>
+    <span>Works offline · No browser bar</span>
+  </div>
+  <button class="install-btn" id="install-btn">INSTALL</button>
+  <button class="install-dismiss" id="install-dismiss">✕</button>
+</div>
+
+</body>
+</html>
